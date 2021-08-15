@@ -15,7 +15,7 @@ from bpy.types import Operator, Panel
 
 
 
-def copy_mirror_weight(Axis,Way,Pattern,special_pattern,left_side,right_side,tolerance):
+def copy_mirror_weight(Axis,Way,Pattern,special_pattern,left_side,right_side,tolerance,ignore_locked):
     start = (datetime.datetime.now())
     print('start')
     bpy.ops.object.mode_set(mode='OBJECT')
@@ -127,34 +127,38 @@ def copy_mirror_weight(Axis,Way,Pattern,special_pattern,left_side,right_side,tol
         myMirrorGroupVertex = {}
         for groups in bpy.data.meshes[mesh].vertices[vertex].groups:
             myGroupVertex[groups.group] = groups.weight #create a dictionary nameGroup = weight
-            
+
             for OneGroup in myGroupVertex: #create a new dictionnary with the name mirror
-                if obj.vertex_groups[OneGroup].name.find(ori_side)>-1:
-                    mirror_normal_group_name = obj.vertex_groups[OneGroup].name.replace(ori_side,dest_side)
-                    if mirror_normal_group_name in DictGroupINV:
-                        myMirrorGroupVertex[DictGroupINV[mirror_normal_group_name]] = myGroupVertex[OneGroup]
-                    else:
-                        #if this group doesn't exist yet add it to the group and the dictionnary                                                    
-                        length=len(DictGroup)
-                        bpy.context.active_object.vertex_groups.new(name=mirror_normal_group_name)
-                        DictGroup[length] = mirror_normal_group_name
-                        DictGroupINV[mirror_normal_group_name]=length
-                       
 
-                if obj.vertex_groups[OneGroup].name.find(dest_side)>-1:
-                    mirror_normal_group_name = obj.vertex_groups[OneGroup].name.replace(dest_side,ori_side)
-                    if mirror_normal_group_name in DictGroupINV:
-                        myMirrorGroupVertex[DictGroupINV[mirror_normal_group_name]] = myGroupVertex[OneGroup]
-                    else:
-                        #if this group doesn't exist yet add it to the group and the dictionnary                                                    
-                        length=len(DictGroup)
-                        bpy.context.active_object.vertex_groups.new(name=mirror_normal_group_name)
-                        DictGroup[length] = mirror_normal_group_name
-                        DictGroupINV[mirror_normal_group_name]=length
+                ignored = ignore_locked and obj.vertex_groups[OneGroup].lock_weight
 
- 
-                if obj.vertex_groups[OneGroup].name.find(ori_side)==-1 and obj.vertex_groups[OneGroup].name.find(dest_side)==-1:
-                    myMirrorGroupVertex[OneGroup] = myGroupVertex[OneGroup]
+                if not ignored:
+                    if obj.vertex_groups[OneGroup].name.find(ori_side)>-1:
+                        mirror_normal_group_name = obj.vertex_groups[OneGroup].name.replace(ori_side,dest_side)
+                        if mirror_normal_group_name in DictGroupINV:
+                            myMirrorGroupVertex[DictGroupINV[mirror_normal_group_name]] = myGroupVertex[OneGroup]
+                        else:
+                            #if this group doesn't exist yet add it to the group and the dictionnary                                                    
+                            length=len(DictGroup)
+                            bpy.context.active_object.vertex_groups.new(name=mirror_normal_group_name)
+                            DictGroup[length] = mirror_normal_group_name
+                            DictGroupINV[mirror_normal_group_name]=length
+                        
+
+                    if obj.vertex_groups[OneGroup].name.find(dest_side)>-1:
+                        mirror_normal_group_name = obj.vertex_groups[OneGroup].name.replace(dest_side,ori_side)
+                        if mirror_normal_group_name in DictGroupINV:
+                            myMirrorGroupVertex[DictGroupINV[mirror_normal_group_name]] = myGroupVertex[OneGroup]
+                        else:
+                            #if this group doesn't exist yet add it to the group and the dictionnary                                                    
+                            length=len(DictGroup)
+                            bpy.context.active_object.vertex_groups.new(name=mirror_normal_group_name)
+                            DictGroup[length] = mirror_normal_group_name
+                            DictGroupINV[mirror_normal_group_name]=length
+
+    
+                    if obj.vertex_groups[OneGroup].name.find(ori_side)==-1 and obj.vertex_groups[OneGroup].name.find(dest_side)==-1:
+                        myMirrorGroupVertex[OneGroup] = myGroupVertex[OneGroup]
     
         
         ##remove the older group
@@ -191,7 +195,7 @@ class BR_OT_mirror_all_vertex_groups(bpy.types.Operator):
     enum_Way: EnumProperty(name="Which Way?", default='normal',
         items = [('reverse', '(-) to (+)', 'reverse'),('normal', '(+) to (-)', 'normal')])
 
-    enum_Pattern: EnumProperty(name="Which Pattern?", default='3',
+    enum_Pattern: EnumProperty(name="Which Pattern?", default='1',
         items = [('4', '_l and _r', '4'),('3', '_L and _R', '3'),('2', '.l and .r', '2'),('1', '.L and .R', '1')])
 
     special_pattern: BoolProperty(name="or... Use my own patter")      
@@ -201,9 +205,11 @@ class BR_OT_mirror_all_vertex_groups(bpy.types.Operator):
             
     tolerance: FloatProperty(name="Tolerance", min=0, max=100, precision=3, default=0.001)
 
+    ignore_locked: BoolProperty(name="Ignore Locked Groups", default=True)
+
  
     def execute(self, context):
-        copy_mirror_weight(self.enum_Axis,self.enum_Way,self.enum_Pattern,self.special_pattern,self.left_side,self.right_side,self.tolerance)
+        copy_mirror_weight(self.enum_Axis,self.enum_Way,self.enum_Pattern,self.special_pattern,self.left_side,self.right_side,self.tolerance,self.ignore_locked)
         return {'FINISHED'}
  
     def invoke(self, context, event):
