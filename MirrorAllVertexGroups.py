@@ -165,12 +165,17 @@ def copy_mirror_weight(Axis,Way,Pattern,special_pattern,left_side,right_side,tol
         for group in bpy.data.meshes[mesh].vertices[DictMirror[vertex]].groups:
             print(DictGroup[group.group])
             print(DictMirror[vertex])
-            obj.vertex_groups[DictGroup[group.group]].remove([DictMirror[vertex]])
+            ignored = ignore_locked and obj.vertex_groups[DictGroup[group.group]].lock_weight
+            if not ignored:
+                obj.vertex_groups[DictGroup[group.group]].remove([DictMirror[vertex]])
 
         
         #add the new ones
         for OneGroupVertex in myMirrorGroupVertex.keys():
-            obj.vertex_groups[DictGroup[OneGroupVertex]].add([DictMirror[vertex]],myMirrorGroupVertex[OneGroupVertex],'REPLACE')
+            group = obj.vertex_groups[DictGroup[OneGroupVertex]]
+            ignored = ignore_locked and group.lock_weight
+            if not ignored:
+                obj.vertex_groups[DictGroup[OneGroupVertex]].add([DictMirror[vertex]],myMirrorGroupVertex[OneGroupVertex],'REPLACE')
                                             
 
                         
